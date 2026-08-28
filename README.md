@@ -628,13 +628,13 @@ undo removes them along with the folders it created.
 
 ```powershell
 # preview only - changes nothing
-.\DownloadsJanitor	ool\DownloadsJanitor.Core.ps1
+.\DownloadsJanitor\tool\DownloadsJanitor.Core.ps1
 
 # actually sort
-.\DownloadsJanitor	ool\DownloadsJanitor.Core.ps1 -Apply
+.\DownloadsJanitor\tool\DownloadsJanitor.Core.ps1 -Apply
 
 # put it all back
-.\DownloadsJanitor	ool\DownloadsJanitor.Undo.ps1
+.\DownloadsJanitor\tool\DownloadsJanitor.Undo.ps1
 ```
 
 Reports and the undo journal live in `%LOCALAPPDATA%\DownloadsJanitor\`. A
