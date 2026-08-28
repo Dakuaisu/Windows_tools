@@ -395,8 +395,12 @@ function Write-HtmlReport {
         $h += '<p class="none">Nothing old enough to bother you about. Your Downloads folder is in good shape.</p>'
     }
 
-    $h += '<h2>Can''t find something?</h2>'
-    $h += '<p>Open your Downloads folder and type the file name into the search box at the top right of the window. Windows searches inside all the new folders too.</p>'
+    $h += '<h2>Don''t know which month it was in?</h2>'
+    $h += '<div class="box">'
+    $h += '<p>Inside each folder there is an item called <b>_All Photos</b>, <b>_All Documents</b> and so on.</p>'
+    $h += '<p><b>Double-click it and you see everything in that folder in one flat list</b> - every month together, with picture thumbnails, and you can sort by name, date or size. It always stays up to date on its own.</p>'
+    $h += '<p style="color:#666;font-size:14px">Or just type the file name into the search box at the top right of any Explorer window - Windows looks inside all these folders too.</p>'
+    $h += '</div>'
 
     $h += '<script>function flt(){var q=document.getElementById("f").value.toLowerCase();'
     $h += 'var rows=document.getElementById("t").rows;for(var i=1;i<rows.length;i++){'
@@ -406,6 +410,47 @@ function Write-HtmlReport {
     $out = Join-Path $Target $script:ReportName
     Set-Content -LiteralPath $out -Value ($h -join "`r`n") -Encoding utf8 -ErrorAction Stop
     return $out
+}
+
+# ===========================================================================
+# "See everything in here" view
+# ===========================================================================
+# Sorting by month is great for tidiness and terrible for "which month was
+# that picture in?". This drops a shortcut into each category folder: one
+# double-click and Explorer lists every file in that category, flat, all
+# months together, with thumbnails. Nothing runs; Windows Search builds the
+# list on open, so it is always current.
+#
+# Why a .lnk and not a .search-ms saved-search file: on a real Windows 11
+# machine .search-ms is associated with the ProgID "SearchFolder", which has
+# NO open command registered - double-clicking one silently does nothing, and
+# even `explorer.exe file.search-ms` refuses. The search-ms: PROTOCOL works
+# fine, so a shortcut that hands the URI to explorer.exe is the reliable path.
+function Write-AllView {
+    param([string]$CategoryPath, [string]$Category)
+
+    $lnkPath = Join-Path $CategoryPath ('_All {0}.lnk' -f $Category)
+    if (Test-Path -LiteralPath $lnkPath) { return $lnkPath }
+
+    # The path MUST be escaped. Six of the category names contain '&', which
+    # is the URI parameter separator - unescaped, Explorer opens nothing at all.
+    $escaped = [System.Uri]::EscapeDataString($CategoryPath)
+
+    # -System.ItemType:Directory   drops the yyyy-MM folders from the results
+    # -System.FileExtension:.lnk   drops this shortcut from its own results
+    # The two clauses must be separated by %20; a '+' silently breaks the query.
+    $uri = 'search-ms:displayname=' + [System.Uri]::EscapeDataString('All ' + $Category) +
+           '&crumb=location:' + $escaped +
+           '&query=-System.ItemType%3ADirectory%20-System.FileExtension%3A.lnk'
+
+    $ws  = New-Object -ComObject WScript.Shell
+    $lnk = $ws.CreateShortcut($lnkPath)
+    $lnk.TargetPath    = (Join-Path $env:SystemRoot 'explorer.exe')
+    $lnk.Arguments     = '"' + $uri + '"'
+    $lnk.IconLocation  = (Join-Path $env:SystemRoot 'System32\imageres.dll') + ',-1003'
+    $lnk.Description   = 'Show everything in this folder, all months together'
+    $lnk.Save()
+    return $lnkPath
 }
 
 $script:CategoryNotes = @{
@@ -633,6 +678,9 @@ try {
         $lower = $f.Name.ToLowerInvariant()
         if ($Config.SkipNames -contains $lower) { continue }
         if ($lower.StartsWith('~$')) { continue }
+        # Never offer this tool's own files up as clutter to delete.
+        if ($lower.EndsWith('.search-ms')) { continue }
+        if ($lower.StartsWith('_all ') -and $lower.EndsWith('.lnk')) { continue }
 
         # Files inside an unmanaged folder are summarised by that folder's own
         # row instead, so one busy torrent folder cannot flood the report.
@@ -710,6 +758,14 @@ try {
                 }
             }
         }
+        # Every category folder that exists gets a flat "see everything" view,
+        # not just the ones touched this run, so it self-heals.
+        foreach ($cat in @(Get-ChildItem -LiteralPath $Path -Directory -Force -ErrorAction SilentlyContinue)) {
+            if ($managed -notcontains $cat.Name) { continue }
+            if (@(Get-ChildItem -LiteralPath $cat.FullName -Directory -Force -ErrorAction SilentlyContinue).Count -eq 0) { continue }
+            try { Write-AllView -CategoryPath $cat.FullName -Category $cat.Name | Out-Null } catch { }
+        }
+
         try {
             $reportPath = Write-HtmlReport -Target $Path -Moves $moves -Stale $stale -LeftAlone $leftAlone `
                             -When $RunStart -GraceDays $GraceDays -StaleDays $StaleDays `

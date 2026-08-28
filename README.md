@@ -590,6 +590,40 @@ file.**
 - Refuses to run against a drive root, profile root, Desktop, Documents,
   `%APPDATA%` and friends.
 
+### Finding things again
+
+Sorting by month is great for tidiness and useless when you cannot remember
+the month. So every category folder gets an **`_All <Category>`** shortcut.
+Double-click it and Explorer lists every file in that category in one flat
+list, all months together, with thumbnails and sorting. Nothing runs — Windows
+Search builds the list on open, so it is always current.
+
+**It is a `.lnk`, not a `.search-ms`, and that matters.** The obvious
+implementation is a saved-search file, and it silently does not work: on
+Windows 11 `.search-ms` is associated with the ProgID `SearchFolder`, but
+
+```
+> ftype SearchFolder
+File type 'SearchFolder' not found or no open command associated with it.
+```
+
+There is no open command registered, so double-clicking a `.search-ms` does
+nothing at all — no error, no window — and even `explorer.exe file.search-ms`
+refuses it. The `search-ms:` *protocol* works fine, so the shortcut hands the
+URI to `explorer.exe` instead. Verified by enumerating Explorer windows over
+COM and counting the items in each result.
+
+Three details in the query are load-bearing, each found by testing:
+
+| Detail | Why |
+| ------ | --- |
+| The folder path is `Uri.EscapeDataString`-encoded | Six category names contain `&`, the URI parameter separator. Unencoded, Explorer opens **nothing at all**. |
+| Clauses separated by `%20`, never `+` | With `+` the query silently returns the wrong set (1 item instead of 77). |
+| `-System.ItemType:Directory -System.FileExtension:.lnk` | The first drops the `yyyy-MM` folders from the results; the second stops the shortcut appearing in its own listing. |
+
+These shortcuts are never moved by the tool and never listed as clutter, and
+undo removes them along with the folders it created.
+
 ### Usage
 
 ```powershell

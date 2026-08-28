@@ -188,8 +188,21 @@ try {
         foreach ($cat in @(Get-ChildItem -LiteralPath $downloadsRoot -Directory -Force -ErrorAction SilentlyContinue)) {
             try {
                 $kids = @(Get-ChildItem -LiteralPath $cat.FullName -Force -ErrorAction SilentlyContinue)
-                if ($kids.Count -eq 1 -and $kids[0].Name -eq '_what-is-this.txt') {
-                    Remove-Item -LiteralPath $kids[0].FullName -Force -ErrorAction Stop
+                if ($kids.Count -eq 0) { continue }
+
+                # A category folder holding nothing but files this tool wrote
+                # itself - the explanatory note and the "see everything" view -
+                # is not "back to how it was". Those are ours to clean up.
+                $onlyOurs = $true
+                foreach ($k in $kids) {
+                    $n = $k.Name.ToLowerInvariant()
+                    $isOurs = ($n -eq '_what-is-this.txt') -or
+                              $n.EndsWith('.search-ms') -or
+                              ($n.StartsWith('_all ') -and $n.EndsWith('.lnk'))
+                    if (-not $isOurs) { $onlyOurs = $false; break }
+                }
+                if ($onlyOurs) {
+                    foreach ($k in $kids) { Remove-Item -LiteralPath $k.FullName -Force -ErrorAction SilentlyContinue }
                     Remove-Item -LiteralPath $cat.FullName -Force -ErrorAction SilentlyContinue
                     $removedDirs++
                 }

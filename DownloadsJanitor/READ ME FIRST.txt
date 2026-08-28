@@ -61,7 +61,16 @@ you have already restarted your computer.
 IF YOU CANNOT FIND A FILE
 -------------------------
 
-Open your Downloads folder and look for:
+Everything is sorted by month. If you do not remember the month, open
+the folder you think it is in and double-click:
+
+    _All Photos        (or _All Documents, _All Music & Audio, ...)
+
+That shows everything in that folder in one flat list, all the months
+together, with picture thumbnails. Sort it by name, date or size. It
+keeps itself up to date, so it is always correct.
+
+You can also open your Downloads folder and look for:
 
     Where are my files.html
 

@@ -256,7 +256,8 @@ $SkipSuffixes = @(
 # --- NEVER moved, matched by extension --------------------------------------
 # .lnk/.url/.website : someone deliberately put that pointer there.
 # .ost               : live Outlook cache bound to a fixed path.
-$NeverMoveExt = @('.lnk', '.url', '.website', '.ost')
+# .search-ms : the flat "see everything" views this tool creates itself.
+$NeverMoveExt = @('.lnk', '.url', '.website', '.ost', '.search-ms')
 
 # --- Categories exempt from the "old files" report ---------------------------
 # An archived contract is doing its job. An installer nobody ran in two years
