@@ -29,6 +29,8 @@ Common conventions across every tool here:
 
 ```
 tools/
+├─ Toolbox.cmd      double-click: one window for everything below
+├─ Toolbox.ps1      the launcher itself
 ├─ diagnostics/     read-only "what is wrong with this machine" tools
 ├─ backup/          capture machine state so it can be rebuilt
 ├─ productivity/    day-to-day utilities
@@ -48,6 +50,56 @@ tools/
 | [New-ProjectScaffold](#new-projectscaffoldps1) | `productivity/` | New project folder, git repo and starter files |
 | [Claude Code context menu](#claude-code-context-menu) | `shell/` | "Open Claude Code here" right-click entry |
 | [Tidy My Downloads](#downloads-janitor--downloadsjanitor) | `DownloadsJanitor/` | Sorts Downloads by type and month, reports old clutter, full undo |
+| [Toolbox](#toolbox--one-window-for-all-of-them) | root | One window for all of the above |
+
+---
+
+## Toolbox — one window for all of them
+
+**`Toolbox.cmd`** / **`Toolbox.ps1`**
+
+Double-click `Toolbox.cmd`. Pick a tool on the left, fill in the form on the
+right, press Run and watch the output appear at the bottom.
+
+```powershell
+.\Toolbox.ps1
+```
+
+Nothing in it is written per tool. **Every control is generated from the target
+script's own `param()` block and comment-based help**, read through the
+PowerShell parser — 65 controls across the nine tools, none of them hardcoded:
+
+| In the script | In the window |
+| ------------- | ------------- |
+| `[switch]$Open` | a checkbox |
+| `[ValidateSet('blank','node',…)]` | a dropdown |
+| `[ValidateSet]` on a `[string[]]` | a multi-select list |
+| `[int]` with `[ValidateRange(1,60)]` | a number box showing the range |
+| `[string[]]$Targets` | a box taking one value per line |
+| anything named `*Path`/`*Dir`/`*Root` | a text box with **Browse** |
+| `.PARAMETER` help text | the grey hint under the label |
+
+Add a parameter to a tool tomorrow and its form grows a control the next time
+you open the window. **The dependency only points one way** — no script knows
+this file exists, so the promise at the top of this README still holds: copy
+any one of them to a machine that has never seen the toolbox and it runs.
+
+Scripts with more than one parameter set get a **Mode** selector, and only the
+parameters valid in that mode are shown — pick `Regex` on `Rename-Bulk` and
+`-Template` disappears, so you cannot build a command PowerShell would reject.
+
+A few details worth knowing:
+
+- Anything you leave at its default is **left off the command line entirely**,
+  so the script computes its own default rather than being handed a copy of it.
+  The command actually run is echoed at the top of the output pane.
+- Tools run as a separate PowerShell process with output streamed live, so the
+  window stays responsive and **Stop** genuinely kills the run.
+- **Run as administrator** relaunches that one tool elevated in its own console
+  — output cannot be captured across the UAC boundary, and running the whole
+  window elevated would put every report in the wrong profile.
+- The `DownloadsJanitor` `.cmd` files open in their own window instead, because
+  they ask questions and you need somewhere to answer them.
 
 ---
 
