@@ -1,0 +1,97 @@
+TIDY MY DOWNLOADS
+=================
+
+Your Downloads folder, sorted into tidy folders. Takes about a minute.
+
+
+WHAT IT DOES
+------------
+
+It sorts the files sitting loose in your Downloads folder into folders
+like Photos, Documents, Spreadsheets and Artwork, each split up by month.
+
+It also gives you a list of old files you have not touched in months,
+in case you want to clear some space.
+
+
+WHAT IT WILL NEVER DO
+---------------------
+
+  *  It never deletes anything. Not one file, not ever.
+     The old-files list is only a list. You decide what to do with it.
+
+  *  It never touches anything from the last 30 days. Whatever you
+     downloaded this week stays exactly where you left it.
+
+  *  It never moves your folders, only loose files.
+
+  *  It never moves anything out of Downloads. Everything stays inside,
+     just tidier.
+
+
+HOW TO START
+------------
+
+  1. Right-click the zip file you received, choose Properties,
+     tick the Unblock box near the bottom, and click OK.
+
+     This one step saves you several scary-looking security warnings.
+
+  2. Right-click the zip file again and choose "Extract All".
+
+  3. Open the folder you just extracted and double-click:
+
+         Tidy My Downloads
+
+  4. It shows you exactly what it would do, and asks before it does
+     anything. If you do not like the look of it, just say no.
+
+
+IF YOU CHANGE YOUR MIND
+-----------------------
+
+Double-click:
+
+    Put Everything Back
+
+Every file returns to exactly where it came from. This works even if
+you have already restarted your computer.
+
+
+IF YOU CANNOT FIND A FILE
+-------------------------
+
+Open your Downloads folder and look for:
+
+    Where are my files.html
+
+Double-click it. It lists every file that moved and where it went, with
+a search box you can type into. You can also just use the search box at
+the top right of any Explorer window - Windows finds moved files fine.
+
+
+TO STOP THE WEEKLY TIDY-UP
+--------------------------
+
+Double-click:
+
+    Remove Downloads Janitor
+
+That stops the automatic weekly run. It does not move any of your files.
+
+
+QUESTIONS
+---------
+
+"Will it mess up my work files?"
+    It only moves files that have been sitting in Downloads untouched
+    for over a month, and it never leaves your Downloads folder.
+    Contracts, invoices and spreadsheets are never listed as clutter.
+
+"Do I need to be an administrator?"
+    No. It installs nothing and changes no system settings.
+
+"It says Windows protected your PC."
+    That is SmartScreen being cautious about a file from the internet.
+    Click "More info", then "Run anyway". Doing step 1 above usually
+    avoids this entirely.
