@@ -1,0 +1,26 @@
+Windows Registry Editor Version 5.00
+
+; ---------------------------------------------------------------------------
+; "Open Claude Code here" — Explorer context menu entry
+;
+; Installs under HKEY_CURRENT_USER, so no administrator rights are needed.
+; Launches the `claude` CLI resolved from PATH, in the folder you clicked.
+; ---------------------------------------------------------------------------
+
+; --- Right-click the empty background of an open folder window --------------
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\OpenClaudeCodeHere]
+@="Open Claude Code here"
+"Icon"="cmd.exe,0"
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\OpenClaudeCodeHere\command]
+@="cmd.exe /s /k \"pushd \"%V\" && claude\""
+
+; --- Right-click a folder icon itself ---------------------------------------
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\OpenClaudeCodeHere]
+@="Open Claude Code here"
+"Icon"="cmd.exe,0"
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\OpenClaudeCodeHere\command]
+@="cmd.exe /s /k \"pushd \"%V\" && claude\""

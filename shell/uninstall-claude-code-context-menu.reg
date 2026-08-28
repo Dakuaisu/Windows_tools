@@ -1,0 +1,7 @@
+Windows Registry Editor Version 5.00
+
+; Removes the "Open Claude Code here" context menu entries.
+
+[-HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\OpenClaudeCodeHere]
+
+[-HKEY_CURRENT_USER\Software\Classes\Directory\shell\OpenClaudeCodeHere]
