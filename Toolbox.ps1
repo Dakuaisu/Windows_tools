@@ -162,6 +162,7 @@ function Get-ToolDefinition {
             $rangeText = ''
             $mySets    = New-Object System.Collections.Generic.List[string]
             $mandatory = $false
+            $hidden    = $false
 
             foreach ($a in $p.Attributes) {
                 $tn = [string](Get-Prop (Get-Prop $a 'TypeName') 'Name' '')
@@ -186,9 +187,24 @@ function Get-ToolDefinition {
                         if ($na.ArgumentName -eq 'Mandatory' -and $na.Argument.Extent.Text -match '\$true') {
                             $mandatory = $true
                         }
+                        # DontShow is PowerShell's own way of saying "this is
+                        # plumbing, not an option" - the diagnostic tools use it
+                        # for their injectable clock. Offering someone a text box
+                        # to type a date into, when the only correct value is the
+                        # one already there, is worse than offering nothing.
+                        if ($na.ArgumentName -eq 'DontShow') {
+                            # [Parameter(DontShow)] omits the expression; the
+                            # long form spells out = $true.
+                            if ($na.ExpressionOmitted -or $na.Argument.Extent.Text -match '\$true') { $hidden = $true }
+                        }
                     }
                 }
             }
+
+            # Hidden parameters are dropped entirely rather than merely not
+            # drawn: leaving them out of the list also keeps them off the
+            # command line, so the script applies its own default.
+            if ($hidden) { continue }
 
             $isArray  = ($type -like '*[[]]*') -or ($p.StaticType -and $p.StaticType.IsArray)
             $isSwitch = ($type -eq 'SwitchParameter')
