@@ -42,7 +42,13 @@
 [CmdletBinding()]
 param(
     [string]$Path,
+
+    # Floor of 1: a grace period of 0 would file away something downloaded
+    # minutes ago, which is the one behaviour this tool exists to prevent.
+    [ValidateRange(1, 3650)]
     [int]   $GraceDays = 30,
+
+    [ValidateRange(1, 3650)]
     [int]   $StaleDays = 90,
     [switch]$Apply,
     [switch]$Quiet,

@@ -20,8 +20,9 @@ WHAT IT WILL NEVER DO
   *  It never deletes anything. Not one file, not ever.
      The old-files list is only a list. You decide what to do with it.
 
-  *  It never touches anything from the last 30 days. Whatever you
-     downloaded this week stays exactly where you left it.
+  *  It never touches anything recent. You choose how old a file has
+     to be before it gets filed away - 7, 30 or 90 days, or your own
+     number. Whatever you downloaded this week stays where you left it.
 
   *  It never moves your folders, only loose files.
 
@@ -43,7 +44,10 @@ HOW TO START
 
          Tidy My Downloads
 
-  4. It shows you exactly what it would do, and asks before it does
+  4. It asks how old a file should be before it is tidied away.
+     Press Enter for the usual 30 days, or pick your own.
+
+  5. It shows you exactly what it would do, and asks before it does
      anything. If you do not like the look of it, just say no.
 
 

@@ -778,8 +778,12 @@ file.**
   and so is structurally incapable of overwriting a file.
 - Every move is written to a journal **before** it happens. If the journal
   cannot be written, nothing moves.
-- **30-day grace period.** Anything downloaded in the last month is never
-  touched, so the Downloads folder itself is always "the last 30 days".
+- **Grace period, chosen at setup.** The wizard asks how old a file must be
+  before it is filed away — 7 / 30 / 90 days or any number from 1 to 3650,
+  defaulting to 30. Nothing younger is ever touched, so the Downloads folder
+  itself is always "the last N days". The chosen value is baked into the
+  scheduled task, so the weekly run behaves exactly like the run the user
+  approved. `-GraceDays` on the engine sets it directly.
 - File *contents* are never read — no hashing, no sniffing. That is what stops
   OneDrive hydrating gigabytes of cloud-only files from a background task.
 - Folders are never moved. An extracted app breaks the moment its parent
