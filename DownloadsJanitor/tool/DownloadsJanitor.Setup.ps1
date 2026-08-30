@@ -48,6 +48,58 @@ function Pause-Here {
     try { Read-Host | Out-Null } catch { }
 }
 
+# How old a file must be before it is filed away. Asked first, so the preview
+# in step 2 reflects the answer rather than a number nobody chose.
+function Read-GraceDays {
+    $default = 30
+    Say ''
+    Say '   Files are left alone until they are this old.'
+    Say '   Anything newer stays exactly where you put it.'
+    Say ''
+    Say '      1)    7 days   - keep Downloads very tidy'
+    Say '      2)   30 days   - recommended'
+    Say '      3)   90 days   - only file away really old things'
+    Say '      4)   something else'
+    Say ''
+
+    while ($true) {
+        Write-Host '   Choose 1-4, or press Enter for 30 days: ' -NoNewline -ForegroundColor White
+        $a = ''
+        try { $a = Read-Host } catch { return $default }
+        if ($null -eq $a) { return $default }
+        $a = $a.Trim()
+        if ($a -eq '') { return $default }
+
+        if ($a -eq '1') { return 7 }
+        if ($a -eq '2') { return 30 }
+        if ($a -eq '3') { return 90 }
+
+        if ($a -eq '4') {
+            while ($true) {
+                Write-Host '   How many days? ' -NoNewline -ForegroundColor White
+                $n = ''
+                try { $n = Read-Host } catch { return $default }
+                if ($null -eq $n -or $n.Trim() -eq '') { return $default }
+                $v = 0
+                if ([int]::TryParse($n.Trim(), [ref]$v) -and $v -ge 1 -and $v -le 3650) {
+                    if ($v -lt 7) {
+                        Say ''
+                        Say ("   Just so you know: at {0} day(s), something you downloaded" -f $v) 'Yellow'
+                        Say  '   this week could be filed away before you go looking for it.'
+                    }
+                    return $v
+                }
+                Say '   Please type a whole number of days between 1 and 3650.' 'Yellow'
+            }
+        }
+
+        # Someone who types "45" straight in meant 45 days.
+        $v = 0
+        if ([int]::TryParse($a, [ref]$v) -and $v -ge 1 -and $v -le 3650) { return $v }
+        Say '   Please type 1, 2, 3 or 4.' 'Yellow'
+    }
+}
+
 function Get-CurrentUserSid {
     # A SID always works. DOMAIN\user does not, on Microsoft-account or
     # Entra-joined laptops where the name is mangled or truncated.
@@ -61,10 +113,12 @@ function Get-CurrentUserSid {
 }
 
 function Register-WeeklyTask {
-    param([string]$ScriptPath)
+    param([string]$ScriptPath, [int]$GraceDays = 30)
 
     $exe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-    $arg = '-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}" -Apply -Quiet' -f $ScriptPath
+    # The chosen age is baked into the task, so the weekly run behaves exactly
+    # like the run the person just approved.
+    $arg = '-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}" -Apply -Quiet -GraceDays {1}' -f $ScriptPath, $GraceDays
     $sid = Get-CurrentUserSid
 
     try {
@@ -109,7 +163,7 @@ Say '   This sorts your Downloads folder into tidy folders'
 Say '   like Photos, Documents and Spreadsheets.'
 Say ''
 Say '   It never deletes anything. Not ever.' 'Green'
-Say '   Anything from the last 30 days stays exactly where it is.'
+Say '   Recent downloads stay exactly where they are.'
 Say ''
 
 if (-not (Test-Path -LiteralPath $Core)) {
@@ -120,19 +174,30 @@ if (-not (Test-Path -LiteralPath $Core)) {
     exit 2
 }
 
-# ------------------------------------------------------ step 1: always preview
+# -------------------------------------------------- step 1: how old is "old"
 Say '   ---------------------------------------------'
-Say '   STEP 1 of 3   Have a look first'
+Say '   STEP 1 of 4   How old before I tidy it away?'
+Say '   ---------------------------------------------'
+
+$graceDays = Read-GraceDays
+
+Say ''
+Say ("   Right - anything from the last {0} days stays put." -f $graceDays) 'Green'
+Say ''
+
+# ------------------------------------------------------ step 2: always preview
+Say '   ---------------------------------------------'
+Say '   STEP 2 of 4   Have a look first'
 Say '   ---------------------------------------------'
 Say ''
 Say '   Nothing will be moved yet. This is just a preview.' 'Cyan'
 
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Core
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Core -GraceDays $graceDays
 if ($LASTEXITCODE -eq 2) { Pause-Here; exit 2 }
 
-# ------------------------------------------------------- step 2: ask to tidy
+# ------------------------------------------------------- step 3: ask to tidy
 Say '   ---------------------------------------------'
-Say '   STEP 2 of 3   Shall I tidy it up?'
+Say '   STEP 3 of 4   Shall I tidy it up?'
 Say '   ---------------------------------------------'
 Say ''
 Say '   If you say yes, the files listed above move into folders'
@@ -150,7 +215,7 @@ if (-not (Ask 'Tidy up my Downloads folder now?')) {
     exit 0
 }
 
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Core -Apply
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Core -Apply -GraceDays $graceDays
 $tidyExit = $LASTEXITCODE
 
 if ($tidyExit -eq 2) {
@@ -159,19 +224,19 @@ if ($tidyExit -eq 2) {
     exit 2
 }
 
-# --------------------------------------------------- step 3: ask to schedule
+# --------------------------------------------------- step 4: ask to schedule
 Say '   ---------------------------------------------'
-Say '   STEP 3 of 3   Keep it tidy automatically?'
+Say '   STEP 4 of 4   Keep it tidy automatically?'
 Say '   ---------------------------------------------'
 Say ''
 Say '   I can do this once a week, quietly in the background,'
 Say '   every Sunday around midday.'
 Say ''
 Say '   It will still never delete anything, and it will still'
-Say '   leave the last 30 days of downloads alone.'
+Say ("   leave the last {0} days of downloads alone." -f $graceDays)
 
 if (Ask 'Tidy up automatically once a week?') {
-    if (Register-WeeklyTask -ScriptPath $Core) {
+    if (Register-WeeklyTask -ScriptPath $Core -GraceDays $graceDays) {
         Say ''
         Say '   Done. It will run every Sunday around midday.' 'Green'
         Say '   To stop it later, double-click "Remove Downloads Janitor".'

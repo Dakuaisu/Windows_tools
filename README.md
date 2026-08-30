@@ -44,6 +44,9 @@ tools/
 | [Get-StartupImpact](#get-startupimpactps1) | `diagnostics/` | Everything that launches at boot or logon, in one table |
 | [Test-InternetHealth](#test-internethealthps1) | `diagnostics/` | Latency, jitter, loss, DNS and TTFB, logged over time |
 | [Get-BatteryReport](#get-batteryreportps1) | `diagnostics/` | Battery wear and capacity, tracked across months |
+| [Get-RebootReason](#get-rebootreasonps1) | `diagnostics/` | Why it restarted, crashed, slept and woke — and what turns it on at 3am |
+| [Get-CrashTrend](#get-crashtrendps1) | `diagnostics/` | Which apps keep crashing, whether it is getting worse, and what to blame |
+| [Test-BackupReality](#test-backuprealityps1) | `backup/` | Is anything actually backing this machine up, by evidence only |
 | [Export-InstalledSoftware](#export-installedsoftwareps1) | `backup/` | Inventory everything installed, generate a restore script |
 | [Rename-Bulk](#rename-bulkps1) | `productivity/` | Batch rename with preview, collision checks and undo |
 | [Set-FocusMode](#set-focusmodeps1) | `productivity/` | Close distractions, block sites, mute toasts — reversibly |
@@ -138,8 +141,8 @@ Get-Help .\productivity\Rename-Bulk.ps1 -Full
 
 ## diagnostics/
 
-Read-only. These four tools inspect the machine and write reports. None of
-them change a setting, install anything, or delete a file.
+Read-only. These tools inspect the machine and write reports. None of them
+change a setting, install anything, or delete a file.
 
 ### Get-SystemSnapshot.ps1
 
@@ -325,6 +328,93 @@ unreadable.
 
 ---
 
+### Get-RebootReason.ps1
+
+**`diagnostics/Get-RebootReason.ps1`**
+
+"Why did my PC restart overnight — and why does it turn itself on at 3am?"
+
+A plain-English timeline of every shutdown, restart, boot, bluescreen, sleep and
+wake, each with a one-sentence verdict naming the culprit. Event Viewer and
+Reliability Monitor hold the same raw events but correlate nothing, and neither
+can be emailed to whoever is helping you.
+
+It separates cases people usually lump together: a clean restart you asked for,
+a restart Windows Update took, a held power button, a sudden power loss, and an
+actual bluescreen — which is named and decoded (`0x00000133
+DPC_WATCHDOG_VIOLATION`) with the path to its crash dump.
+
+The second half answers the other question: **what is allowed to wake this PC.**
+Wake-armed devices, scheduled tasks with WakeToRun set, and wake timers, each
+with where *you* would turn it off. It never changes any of them.
+
+```powershell
+.\diagnostics\Get-RebootReason.ps1 -Days 60
+```
+
+| Option | Meaning |
+| ------ | ------- |
+| `-Days <n>` | How far back the timeline reaches. Default 14 |
+| `-MaxEventsPerQuery <n>` | Per-source event cap so a churning log cannot stall the run. Default 2000 |
+| `-HistoryLimit <n>` | Rows kept in the history CSV. Default 5000, `0` for unlimited |
+| `-Open` | Open the report when done |
+| `-Quiet` | No console output — for scheduled runs |
+| `-OutputDir <path>` | Where the report lands |
+
+**Output:** `%LOCALAPPDATA%\GetRebootReason\RebootReason.html` and
+`RebootReason_history.csv`.
+**Exit code:** `0` nothing alarming, `1` a bluescreen or sudden power loss in
+the window, `2` a data source was unavailable, `3` the System log could not be
+read at all, `4` no writable output folder, `5` unexpected error.
+
+> Listing active wake *timers* needs administrator rights. Without them that one
+> line is skipped and said so; everything else in the report is complete.
+
+---
+
+### Get-CrashTrend.ps1
+
+**`diagnostics/Get-CrashTrend.ps1`**
+
+"Why does this app keep crashing — and is it getting worse?"
+
+A league table of application crashes and hangs over the window, each with a
+trend arrow, plus a likely-culprit line naming the faulting module and saying
+what it is: the app's own code, a Windows component, or a third-party DLL —
+which is usually a plugin, codec or game overlay, and is the finding that
+actually leads somewhere.
+
+Underneath it tracks Windows' own **stability index** per day, so "the whole
+machine is getting worse" stops being a feeling and becomes a number.
+
+Reliability Monitor shows you the same events one day at a time, with no
+aggregation, no module pattern and no export.
+
+```powershell
+.\diagnostics\Get-CrashTrend.ps1 -Days 30
+```
+
+| Option | Meaning |
+| ------ | ------- |
+| `-Days <n>` | Window length. Default 30. The report says so if the log does not reach that far back |
+| `-Top <n>` | League-table rows. Default 15 |
+| `-MaxEvents <n>` | Per-query event cap. Default 5000 |
+| `-SkipWerStore` | Skip the Windows Error Reporting folder sweep |
+| `-HistoryLimit <n>` | Rows kept in each CSV. Default 5000 |
+| `-Open` / `-Quiet` / `-OutputDir <path>` | As elsewhere |
+
+**Output:** `%LOCALAPPDATA%\GetCrashTrend\CrashTrend.html`, plus
+`StabilityDaily.csv` and `RunHistory.csv`.
+**Exit code:** `0` nothing crashed or hung, `1` crashes present and the trend is
+flat or improving, `2` worsening, `4` no usable data, `5` no writable output
+folder.
+
+> The Application log is circular. If it does not reach back as far as `-Days`
+> asks, the report says where it actually stops rather than quietly reporting
+> "9 crashes in 90 days" from 40 days of data.
+
+---
+
 ## backup/
 
 ### Export-InstalledSoftware.ps1
@@ -390,6 +480,61 @@ and a `README.txt` explaining each.
 > winget ships as a Store app-execution alias that is not always on `PATH`.
 > The script falls back to its known location, so this works even in shells
 > where `winget` alone would not resolve.
+
+---
+
+### Test-BackupReality.ps1
+
+**`backup/Test-BackupReality.ps1`**
+
+"Is anything actually backing this machine up, and what would I lose if it died
+today?"
+
+A traffic light per folder — Desktop, Documents, Pictures, Downloads, plus
+anything you pass to `-Path` — based on **evidence only**. It looks for OneDrive
+sync-root membership, File History coverage, Dropbox and Google Drive, and dates
+the newest evidence it can find for each.
+
+Nothing else on Windows answers this in one place, and the failure it is really
+built for is the one nobody notices:
+
+> **A signed-out OneDrive is worse than no backup.** The folder is still there,
+> Explorer still shows your files, and every naive signal says you are covered —
+> but the files are cloud-only placeholders that will not open, and nothing has
+> synced in months. That case is reported RED with its own wording, not lumped
+> in with "no backup found".
+
+It is equally careful in the other direction. Windows logs a cheerful
+"Backup — Success" every day for **settings** sync, which protects none of your
+files; the report says so explicitly rather than letting it count as evidence.
+
+```powershell
+.\backup\Test-BackupReality.ps1
+```
+
+```powershell
+.\backup\Test-BackupReality.ps1 -Path D:\Projects, D:\Photos
+```
+
+| Option | Meaning |
+| ------ | ------- |
+| `-Path <dirs>` | Extra folders to assess alongside the four known ones |
+| `-StaleDays <n>` | Evidence older than this turns green to yellow. Default 14 |
+| `-SampleLimit <n>` | Per-folder file-sampling cap. Default 2000 |
+| `-HistoryLimit <n>` | Rows kept in the history CSV. Default 5000 |
+| `-Open` / `-Quiet` / `-OutputDir <path>` | As elsewhere |
+
+**Output:** `%LOCALAPPDATA%\Test-BackupReality\BackupReality.html` and
+`BackupReality_history.csv`.
+**Exit code:** `0` every folder shows signs of an active backup, `1` at least
+one is stale or weak, `2` at least one has no signs at all (or sits in a dead
+sync root), `3` a `-Path` you gave does not exist, `4` internal failure.
+
+> **It reports evidence; it cannot certify that a backup works.** Every verdict
+> is worded as "signs of" or "no signs of", and the only way to know a backup
+> works is to restore from it. A few checks — Windows Server Backup, shadow
+> copies, the File History engine log — need administrator rights; each is
+> named as skipped rather than silently counted as absent.
 
 ---
 
@@ -633,8 +778,12 @@ file.**
   and so is structurally incapable of overwriting a file.
 - Every move is written to a journal **before** it happens. If the journal
   cannot be written, nothing moves.
-- **30-day grace period.** Anything downloaded in the last month is never
-  touched, so the Downloads folder itself is always "the last 30 days".
+- **Grace period, chosen at setup.** The wizard asks how old a file must be
+  before it is filed away — 7 / 30 / 90 days or any number from 1 to 3650,
+  defaulting to 30. Nothing younger is ever touched, so the Downloads folder
+  itself is always "the last N days". The chosen value is baked into the
+  scheduled task, so the weekly run behaves exactly like the run the user
+  approved. `-GraceDays` on the engine sets it directly.
 - File *contents* are never read — no hashing, no sniffing. That is what stops
   OneDrive hydrating gigabytes of cloud-only files from a background task.
 - Folders are never moved. An extracted app breaks the moment its parent
